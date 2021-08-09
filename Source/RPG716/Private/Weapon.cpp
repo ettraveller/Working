@@ -10,6 +10,7 @@
 #include "Particles/ParticleSystemComponent.h"
 #include <Components/BoxComponent.h>
 #include "Enemy.h"
+#include "MainPlayerController.h"
 
 
 AWeapon::AWeapon()
@@ -33,8 +34,13 @@ AWeapon::AWeapon()
 
     Damage = 25.f;
 
-	
+    bItemEquipDown = false;
+
+ 
 }
+
+
+
 
 void AWeapon::BeginPlay()
 {
@@ -55,8 +61,30 @@ void AWeapon::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* O
         AMainCharacter* Main = Cast<AMainCharacter>(OtherActor);
         if (Main)
         {
+            Main->setWeapon(this);
+            if (Main->CallItemEquip(false, this)) {
+               
+                bItemEquipDown = true;
+                
+                //Main->SetActiveOverlappingItem(this);
+            }
+            else {
+                return;
+            }
+            /*UE_LOG(LogTemp, Warning, TEXT("OnOverlapBegin Euqip!!"));
+            bItemEquipDown = true;
+            Main->CallItemEquip();*/
+            
             //Equip(Main);
-            Main->SetActiveOverlappingItem(this);
+            //Main->SetActiveOverlappingItem(this);
+            
+            
+
+           // Main->AddItem(this);
+
+            /*Main->AddToInventory(this);
+
+            GEngine->AddOnScreenDebugMessage(1, 3, FColor::Green, *ThumbnailName);*/
         }
     }
 }
@@ -73,7 +101,8 @@ void AWeapon::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* Oth
 		if (Main)
 		{
 			//Equip(Main);
-			Main->SetActiveOverlappingItem(nullptr);
+			//Main->SetActiveOverlappingItem(nullptr);
+            Main->UnCallItemEquip();
 		}
 	}
 }
@@ -159,5 +188,6 @@ void AWeapon::DeactivateCollision()
 {
     CombatCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
+
 
 

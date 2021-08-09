@@ -21,8 +21,25 @@ void APickUp::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* O
 		AMainCharacter* Main = Cast<AMainCharacter>(OtherActor);
 		if (Main)
 		{
-			OnPickupBP(Main);
-			Main->PickUpLocations.Add(GetActorLocation());
+
+			//UE_LOG(LogTemp, Warning, TEXT("Picked up  ???: %s"), *PickupName);
+
+			FString PickupNamecpp = *PickupName;
+
+			if (PickupNamecpp.Equals("Coin")) {
+				// 코인이면 바로 코인 습득
+				OnPickupBP(Main);
+				Destroy();
+			}
+			else {
+				Main->SetPotion(this, PickupNamecpp);
+				//닿으면 collision 없애기
+				this->SetActorEnableCollision(false);
+				//아니면 potion 사용 여부 
+				Main->CallItemPotion(this);
+			}
+			//Main->CallItemPotion();
+			//Main->PickUpLocations.Add(GetActorLocation());
 
 			if (OverlapParticles)
 			{
@@ -32,7 +49,7 @@ void APickUp::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* O
 			{
 				UGameplayStatics::PlaySound2D(this, OverlapSound);
 			}
-			Destroy();
+			
 		}
 	}
 
@@ -41,5 +58,14 @@ void APickUp::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* O
 void APickUp::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	Super::OnOverlapEnd(OverlappedComponent, OtherActor, OtherComp, OtherBodyIndex);
-	UE_LOG(LogTemp, Warning, TEXT("PickUp::Item Overlap End!"));
+
+	if (OtherActor)
+	{
+		AMainCharacter* Main = Cast<AMainCharacter>(OtherActor);
+		if (Main)
+		{
+			Main->UnCallItemPotion();
+		}
+	}
+
 }

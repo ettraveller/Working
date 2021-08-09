@@ -45,5 +45,5 @@ void AExplosive::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor
 void AExplosive::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
     Super::OnOverlapEnd(OverlappedComponent, OtherActor, OtherComp, OtherBodyIndex);
-    //UE_LOG(LogTemp, Warning, TEXT("Explosive::Item Overlap End!"));
+    UE_LOG(LogTemp, Warning, TEXT("Explosive::Item Overlap End!"));
 }

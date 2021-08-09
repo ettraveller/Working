@@ -52,4 +52,5 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Spawning")
 	void SpawnOurActor(UClass* ToSpawn, const FVector& Location);
 
+
 };

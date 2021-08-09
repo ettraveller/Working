@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "MainCharacter.h"
@@ -21,14 +21,6 @@
 #include <GameFramework/Character.h>
 #include "RPGSaveGame.h"
 #include "ItemStorage.h"
-#include <Components/BoxComponent.h>
-#include "Skill.h"
-#include <Components/SceneComponent.h>
-#include "SkillComponent.h"
-
-
-
-
 
 
 // Sets default values
@@ -50,28 +42,6 @@ AMainCharacter::AMainCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);//socket = 에셋을 넣을수있는 장소
 	FollowCamera->bUsePawnControlRotation = false;
 
-	//Create the root component for our spring arms
-	//
-	////Attach it to our root
-	//SkillsRootComp->SetupAttachment(RootComponent);
-
-	////Create the spring arm components and attach them to their root
-	SkillsRootComp = CreateDefaultSubobject<USceneComponent>(FName("SkillsRootComp"));
-	SkillsRootComp->SetupAttachment(RootComponent);
-
-	LevelOneSpringArm = CreateDefaultSubobject<USpringArmComponent>(FName("LevelOneSpringArm"));
-	LevelTwoSpringArm = CreateDefaultSubobject<USpringArmComponent>(FName("LevelTwoSpringArm"));
-	LevelThreeSpringArm = CreateDefaultSubobject<USpringArmComponent>(FName("LevelThreeSpringArm"));
-
-
-	LevelOneSpringArm->SetupAttachment(SkillsRootComp);
-	LevelTwoSpringArm->SetupAttachment(SkillsRootComp);
-	LevelThreeSpringArm->SetupAttachment(SkillsRootComp);
-
-	//Initializing the skills component
-	SkillsComponent = CreateDefaultSubobject<USkillComponent>(FName("SkillsComponent"));
-	ValueSkill6 = CreateDefaultSubobject<ASkill>(TEXT("SKill"));
-
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 	
 	BaseTurnRate = 65.f;
@@ -89,7 +59,7 @@ AMainCharacter::AMainCharacter()
 	GetCharacterMovement()->AirControl = 0.3f;
 
 	MaxHealth = 100.f;
-	Health = 65.f;
+	Health = 70.f;
 	MaxStamina = 300.f;
 	Stamina = 120.f;
 	Coins = 0;
@@ -101,6 +71,7 @@ AMainCharacter::AMainCharacter()
 	bLMBDown = false;
 	bESCDown = false;
 	bInventoryDown = false;
+	bPickUpItem = false;
 
 	// ENUMS 들 initialize 하는것
 	// Initialize Enums
@@ -121,19 +92,15 @@ AMainCharacter::AMainCharacter()
 
 	bCanDash = true;
 	DashDistance = 1200.f;
-	DashCoolDown = 2.0f;
-	StopDashTime = 0.7f;
-	
-	bCanFire = true;
-	FireCoolDown = 3.f;
-	
-	
+	DashCoolDown = 1.0f;
+	DashStopTime = 0.7f;
+
 }
 
 // PickupLocation 들의 위치에 디버그 그림 넣어주기
 void AMainCharacter::ShowPickUpLocation()
 {
-// tarray for문 돌리는거임
+	// tarray for문 돌리는거임
 	/*for (int32 i = 0; i < PickUpLocations.Num(); i++)
 	{
 		UKismetSystemLibrary::DrawDebugSphere(this, PickUpLocations[i], 35.f, 12, FLinearColor::Blue, 5.f, 2.f);
@@ -179,7 +146,7 @@ void AMainCharacter::BeginPlay()
 
 	MainPlayerController = Cast<AMainPlayerController>(GetController());
 
-	//LoadGameNoSwitch();
+	LoadGameNoSwitch();
 
 	// 다른맵으로 로드시 바로 게임모드로 전환될수 있게 하기
 	if (MainPlayerController)
@@ -349,14 +316,14 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAction(TEXT("ESC"), IE_Released, this, &AMainCharacter::ESCUp);
 
 
+
 	PlayerInputComponent->BindAction(TEXT("Inventory"), IE_Pressed, this, &AMainCharacter::InventoryDown);
 	PlayerInputComponent->BindAction(TEXT("Inventory"), IE_Released, this, &AMainCharacter::InventoryUp);
 
-	PlayerInputComponent->BindAction(TEXT("Dash"), IE_Pressed, this, &AMainCharacter::Dash);
 
-	PlayerInputComponent->BindAction(TEXT("Fire_FireBall"), IE_Pressed, this, &AMainCharacter::Fire_FireBall);
-	PlayerInputComponent->BindAction(TEXT("Fire_PoisionBall"), IE_Pressed, this, &AMainCharacter::Fire_PoisionBall);
-		
+	PlayerInputComponent->BindAction(TEXT("Dash"), IE_Pressed, this, &AMainCharacter::Dash);
+	
+
 	PlayerInputComponent->BindAxis(TEXT("MoveForward"), this, &AMainCharacter::MoveForward);
 	PlayerInputComponent->BindAxis(TEXT("MoveRight"), this, &AMainCharacter::MoveRight);
 	PlayerInputComponent->BindAxis(TEXT("TurnRate"), this, &AMainCharacter::TurnAtRate);
@@ -372,10 +339,9 @@ bool AMainCharacter::CanMove(float Value)
 
 	if (MainPlayerController)
 	{
-		return (Value != 0.0)
-		    && (!bAttacking)
-		    && (MovementStatus != EMovementStatus::EMS_Dead)
-			&& (!MainPlayerController->bPauseMenuVisible);
+		return (Value != 0.0) && (!bAttacking) &&
+			(MovementStatus != EMovementStatus::EMS_Dead) &&
+			(!MainPlayerController->bPauseMenuVisible);
 	}
 	return false;
 			
@@ -445,47 +411,31 @@ void AMainCharacter::LookUpAtRate(float Rate)
 
 void AMainCharacter::Dash()
 {
-	if (MainPlayerController) if (MainPlayerController->bPauseMenuVisible) return;
-
-	if (MovementStatus != EMovementStatus::EMS_Dead)
+    
+	if (bCanDash && (Stamina >= 30))
 	{
-		if (bCanDash && (Stamina >= 30))
-		{
-			
-			
-			GetCharacterMovement()->BrakingFrictionFactor = 0.f;
-			FVector DashLocation = FollowCamera->GetForwardVector();
-			LaunchCharacter(FVector(DashLocation.X, DashLocation.Y, 0).GetSafeNormal() * DashDistance, true, true);
-			Stamina -= 30.f;
-
-			//UE_LOG(LogTemp, Warning, TEXT("DAsh"));
-			bCanDash = false;
-			GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
-			GetWorldTimerManager().SetTimer(DashTimer, this, &AMainCharacter::StopDash, StopDashTime, false);
-			
-			
-		}
+	    GetCharacterMovement()->BrakingFrictionFactor = 0.f;
+		FVector DashLocation = FollowCamera->GetForwardVector();
+		LaunchCharacter(FVector(DashLocation.X, DashLocation.Y, 0).GetSafeNormal() * DashDistance, true, true);
+		Stamina -= 30.f;
+		bCanDash = false;
+		GetWorldTimerManager().SetTimer(DashTimer, this, &AMainCharacter::StopDash, DashStopTime, false);
 	}
-	
+
 }
 
 
 void AMainCharacter::StopDash()
 {
-    
-	bCanDash = false;
+	GetCharacterMovement()->StopMovementImmediately();
 	GetWorldTimerManager().SetTimer(DashTimer, this, &AMainCharacter::ResetDash, DashCoolDown, false);
-	//GetCharacterMovement()->StopMovementImmediately();
 	GetCharacterMovement()->BrakingFrictionFactor = 2.f;
-	UE_LOG(LogTemp, Warning, TEXT("StopDash"));
-	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
-	
 }
+
 
 void AMainCharacter::ResetDash()
 {
     bCanDash = true;
-	UE_LOG(LogTemp, Warning, TEXT("resetDash"));
 }
 
 // 폭탄 닿으면 health 값 줄어들게 하기
@@ -547,6 +497,21 @@ void AMainCharacter::IncrementHealth(float Amount)
 
 }
 
+void AMainCharacter::IncrementStamina(float Amount)
+{
+
+	if (Stamina + Amount >= MaxStamina)
+	{
+		Stamina = MaxStamina;
+	}
+	else {
+
+		Stamina += Amount;
+
+	}
+
+}
+
 void AMainCharacter::Die()
 {
 	if (MovementStatus == EMovementStatus::EMS_Dead)
@@ -580,6 +545,8 @@ void AMainCharacter::LMBDown()
 {
     bLMBDown = true;
 
+	//
+	UE_LOG(LogTemp, Warning, TEXT("()()("));
 	// 죽으면 장비착용 비활성화 하기
 	if (MovementStatus == EMovementStatus::EMS_Dead)
 	{
@@ -588,15 +555,19 @@ void AMainCharacter::LMBDown()
 	// pausemenu 실행되고 있으면 작동 안되게 하기
 	if (MainPlayerController) if (MainPlayerController->bPauseMenuVisible) return;
 
+
 	if (ActiveOverlappingItem)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("%%%%%%%%%%%%%%%%"));
 		//UE_LOG(LogTemp, Warning, TEXT("11111111"));
 		AWeapon* Weapon = Cast<AWeapon>(ActiveOverlappingItem);
 		if (Weapon)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("^^^^^^"));
 			Weapon->Equip(this);
 			// 마우스 왼쪽 클릭시 착용가능
 			SetActiveOverlappingItem(nullptr);
+			MainPlayerController->UnableItemEquipMenu();
 		}
 	}
 	else if(EquipWeapon)
@@ -628,13 +599,14 @@ void AMainCharacter::ESCUp()
 }
 
 
+
 // 인벤토리창 껐다 켰다 하기.
 void AMainCharacter::InventoryDown()
 {
 	bInventoryDown = true;
 	if (MainPlayerController)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Inventory Down"));
+		//UE_LOG(LogTemp, Warning, TEXT("Inventory Down"));
 		MainPlayerController->ToggleInventoryMenu();
 	}
 }
@@ -646,6 +618,17 @@ void AMainCharacter::InventoryUp()
 	
 }
 
+void AMainCharacter::PickUpItemDown()
+{
+	bPickUpItem = true;
+
+}
+
+void AMainCharacter::PickUpItemUp()
+{
+	bPickUpItem = false;
+}
+
 void AMainCharacter::SetEquipWeapon(AWeapon* WeaponToSet)
 {
 	// 기존의 weapon 을 가지고 있다가 다른 weapon 착용시 BP 에서 기존의 Weapon 사라짐
@@ -654,6 +637,118 @@ void AMainCharacter::SetEquipWeapon(AWeapon* WeaponToSet)
 		EquipWeapon->Destroy();
 	}
     EquipWeapon = WeaponToSet; 
+}
+
+
+
+
+bool AMainCharacter::CallItemEquip(bool result, AItem* Item)
+{
+	bool bEquipOn = result;
+	MainPlayerController->ViewItemEquipMenu();
+	FVector WLocation = Item->GetActorLocation();
+	MainPlayerController->WeaponLocation = WLocation;
+	if (Item != nullptr) {
+
+		UE_LOG(LogTemp, Warning, TEXT("%d dfsfwef" ), bEquipOn);
+	}
+	return bEquipOn;
+	
+}
+
+
+void AMainCharacter::UnCallItemEquip()
+{
+	if (MainPlayerController) {
+		MainPlayerController->UnableItemEquipMenu();
+	}
+}
+
+void AMainCharacter::EquipOn()
+{
+	//CPPEquipOn();
+
+	if (GetWeapon() != nullptr) {
+
+		AItem* Main = Cast<AItem>(GetWeapon());
+		SetActiveOverlappingItem(Main);
+		LMBDown();
+		
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("No have Actorxxxxx"));
+	}
+}
+
+
+
+void AMainCharacter::EquipSave()
+{
+	if (GetWeapon() != nullptr) {
+
+		AItem* Main = Cast<AItem>(GetWeapon());
+		AddItem(Main);
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("No have Actorxxxxx"));
+	}
+
+}
+
+void AMainCharacter::EquipOnInThumbnail()
+{
+
+	if (GetWeapon() != nullptr) {
+
+		AItem* Main = Cast<AItem>(GetWeapon());
+		SetActiveOverlappingItem(Main);
+		LMBDown();
+		RemoveItemFromInventory(GetWeapon());
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("No have Actorxxxxx"));
+	}
+}
+
+void AMainCharacter::CallItemPotion(AItem* Item)
+{
+	if (MainPlayerController) {
+		MainPlayerController->ViewItemPotionMenu();
+		FVector WLocation = Item->GetActorLocation();
+		MainPlayerController->PotionLocation = WLocation;
+	}
+}
+
+void AMainCharacter::UnCallItemPotion()
+{
+	if (MainPlayerController) {
+		MainPlayerController->UnableItemPotionMenu();
+	}
+}
+
+void AMainCharacter::PotionUse(AItem* Item)
+{
+	GetPickUp()->Destroy();
+	MainPlayerController->UnableItemPotionMenu();
+}
+
+void AMainCharacter::PotionUseInThumbnail()
+{
+	RemoveItemFromInventory(GetPickUp());
+
+}
+
+void AMainCharacter::PotionSave()
+{
+	if (GetPickUp() != nullptr) {
+
+		AItem* Main = Cast<AItem>(GetPickUp());
+		AddItem(Main);
+		MainPlayerController->UnableItemPotionMenu();
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("No have Actorxxxxx"));
+	}
 }
 
 // montage 만들었던것 사용시
@@ -805,6 +900,9 @@ void AMainCharacter::SaveGame()
 	SaveGameInstance->CharacterStats.Stamina = Stamina;
 	SaveGameInstance->CharacterStats.MaxStamina = MaxStamina;
 	SaveGameInstance->CharacterStats.Coins = Coins;
+	SaveGameInstance->CharacterStats.InventoryArray = Inventory;
+	
+
 
 	// MapName 을 가져오긴 하나 앞에 부가적인 단어들이 있음
 	FString MapName = GetWorld()->GetMapName();
@@ -832,11 +930,12 @@ void AMainCharacter::LoadGame(bool SetPosition)
 	LoadGameInstance = Cast<URPGSaveGame>(UGameplayStatics::LoadGameFromSlot(LoadGameInstance->PlayerName, LoadGameInstance->UserIndex));
 
 	// save 와 반대로 데이터들을 불러오기
-	Health = 100.f;
+	Health = LoadGameInstance->CharacterStats.Health;
 	MaxHealth = LoadGameInstance->CharacterStats.MaxHealth;
-	Stamina = 150.f;
+	Stamina = LoadGameInstance->CharacterStats.Stamina;
 	MaxStamina = LoadGameInstance->CharacterStats.MaxStamina;
 	Coins = LoadGameInstance->CharacterStats.Coins;
+	Inventory = LoadGameInstance->CharacterStats.InventoryArray;
 
 	if (WeaponStorage)
 	{
@@ -882,11 +981,12 @@ void AMainCharacter::LoadGameNoSwitch()
 	LoadGameInstance = Cast<URPGSaveGame>(UGameplayStatics::LoadGameFromSlot(LoadGameInstance->PlayerName, LoadGameInstance->UserIndex));
 
 	// save 와 반대로 데이터들을 불러오기
-	Health = 100.f;
+	Health = LoadGameInstance->CharacterStats.Health;
 	MaxHealth = LoadGameInstance->CharacterStats.MaxHealth;
-	Stamina = 150.f;
+	Stamina = LoadGameInstance->CharacterStats.Stamina;
 	MaxStamina = LoadGameInstance->CharacterStats.MaxStamina;
 	Coins = LoadGameInstance->CharacterStats.Coins;
+	Inventory = LoadGameInstance->CharacterStats.InventoryArray;
 
 	if (WeaponStorage)
 	{
@@ -911,159 +1011,116 @@ void AMainCharacter::LoadGameNoSwitch()
 	GetMesh()->bNoSkeletonUpdate = false;
 }
 
-FTransform AMainCharacter::GetFixedSpringArmTransform(USpringArmComponent* SpringArm)
+bool AMainCharacter::AddItem(AItem* Item)
 {
-	FTransform result;
-	if (SpringArm)
-	{
-		result = SpringArm->GetComponentTransform();
-		//We want a fixed location for our transform, since we don't want to spawn our skills
-		//right on top of our character.
-		result.SetLocation(result.GetLocation() + SpringArm->GetForwardVector() * 100);
+	
+	//Inventory.RemoveAt(0);
+	Inventory.Add(Item);
+	
+	Item->Inventory(true);
+
+	Item->SetActorHiddenInGame(true);
+	Item->SetActorEnableCollision(false);
+
+	//Item->Destroy();
+	
+
+	for (AItem* PickUp : Inventory) {
+		UE_LOG(LogTemp, Warning, TEXT("Item add : %s"), *PickUp->GetName());
 	}
-	return result;
+
+	// 비교 하는중에 getname() e
+
+	UE_LOG(LogTemp, Warning, TEXT("END OF ITEMS"));
+	
+	return false;
 }
 
-TArray<FTransform> AMainCharacter::GetSpawnTransforms(int32 level)
+// 인벤토리에 있는 아이템 모두 내놓게 하기
+void AMainCharacter::DropAllInventory()
 {
-	TArray<FTransform> SpawnPoints;
-	switch (level)
-	{
-	case 1:
-	{UE_LOG(LogTemp, Warning, TEXT("case1"));
-		SpawnPoints.Add(GetFixedSpringArmTransform(LevelOneSpringArm));
-		break;
+	for (AItem* Pickup : Inventory) {
+
+		DropItem(Pickup);
 	}
-	case 2:
-	{  
-	UE_LOG(LogTemp, Warning, TEXT("case2"));
-		SpawnPoints.Add(GetFixedSpringArmTransform(LevelTwoSpringArm));
-		SpawnPoints.Add(GetFixedSpringArmTransform(LevelThreeSpringArm));
-		break;
-	}
-	case 3:
-	{UE_LOG(LogTemp, Warning, TEXT("case3"));
-		SpawnPoints.Add(GetFixedSpringArmTransform(LevelOneSpringArm));
-		SpawnPoints.Add(GetFixedSpringArmTransform(LevelTwoSpringArm));
-		SpawnPoints.Add(GetFixedSpringArmTransform(LevelThreeSpringArm));
-	}
-	case 4:
-	{
-	    ValueSkill6->Damage += 10.f;
-	}
-	case 5:
-	{
-		ValueSkill6->Damage += 20.f;
-	}
-	default:
-		break;
-	}
-	return SpawnPoints;
+	Inventory.Empty();
 }
 
-
-bool AMainCharacter::IsValidGetLevel_Fire()
+void AMainCharacter::DropItem(AItem* Item)
 {
-   
-    return ValueSkill6->GetLevel_Fire() >= 1;
+	UE_LOG(LogTemp, Warning, TEXT("Drop!!!"));
+
+	FVector Location = GetOwner()->GetActorLocation();
+	Location.X += FMath::FRandRange(-50.0f, 100.0f);
+	Location.Y += FMath::FRandRange(-50.0f, 100.0f);
+
+	// { 여기서 부터 다음번 가로까지는 높은 모서리같은곳에서 죽었을시 가지고있는 아이템 공중에 계속 띄우지 않고 떨어트리게 하는것.
+	FVector EndRay = Location;
+	EndRay.Z -= 500.0f;
+
+	FHitResult HitResult;
+	FCollisionObjectQueryParams ObjQuery;
+	FCollisionQueryParams CollsionParams;
+	CollsionParams.AddIgnoredActor(GetOwner());
+
+	GetWorld()->LineTraceSingleByObjectType(
+
+		OUT HitResult,
+		Location,
+		EndRay,
+		ObjQuery,
+		CollsionParams
+
+	);
+
+	if (HitResult.ImpactPoint != FVector::ZeroVector) {
+		Location = HitResult.ImpactPoint;
+	}
+	// }
+	Item->SetActorLocation(Location);
+	// 그리고 인벤토리에서 나온 아이템은 픽업 안되게 해둠
+	Item->Inventory(false);
+
+	RemoveItemFromInventory(Item);
 }
 
-
-bool AMainCharacter::IsValidGetLevel_Poision()
-{
-    return ValueSkill6->GetLevel_Poision() >= 1;
-}
-
-void AMainCharacter::Fire_FireBall()
-{
-	if (MainPlayerController) if (MainPlayerController->bPauseMenuVisible) return;
-
-	if (MovementStatus != EMovementStatus::EMS_Dead)
-	{	    		
-		if (bCanFire && (Stamina >= 50))
-		{
-			//This is a dummy logic - we will only have 2 skills for this post
-			TSubclassOf<ASkill> SkillBP_fire = SkillsComponent->SkillsArray[1];
-			UE_LOG(LogTemp, Warning, TEXT("Fire1"));
-			if (SkillBP_fire)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Fire2"));
-				FActorSpawnParameters ActorSpawnParams;
-
-				//	TArray<FTransform> SpawnTransforms = GetSpawnTransforms(SkillBP->GetDefaultObject<ASkill>()->GetLevel());
-				TArray<FTransform> SpawnTransforms_Fire = GetSpawnTransforms(ValueSkill6->GetLevel_Fire());
-
-				//TArray<FTransform> SpawnTransforms_Poision = GetSpawnTransforms(SkillBP->GetDefaultObject<ASkill>()->GetLevel_Poision());
-				if (IsValidGetLevel_Fire())
-				{
-					if (SpawnTransforms_Fire.Num() != 0)
-					{
-
-						for (int32 i = 0; i < SpawnTransforms_Fire.Num(); i++)
-						{
-							GetWorld()->SpawnActor<ASkill>(SkillBP_fire, SpawnTransforms_Fire[i], ActorSpawnParams);
-							Stamina -= 50;
-							bCanFire = false;
-							GetWorldTimerManager().SetTimer(DashTimer, this, &AMainCharacter::ResetFire, FireCoolDown, false);
-							UE_LOG(LogTemp, Warning, TEXT("Fire3"));
-
-						}
-
-
-					}
-				}
-				
-			}
-	    }
-    }
-}
-
-
-void AMainCharacter::Fire_PoisionBall()
+// 아이템을 가지고 있으면서 드롭버튼을 누르면 아이템 삭제
+bool AMainCharacter::RemoveItemFromInventory(AItem* Item)
 {
 
-	if (MainPlayerController) if (MainPlayerController->bPauseMenuVisible) return;
-
-	if (MovementStatus != EMovementStatus::EMS_Dead)
+	int32 Counter = 0;
+	for (AItem* Pickup : Inventory)
 	{
-		if (bCanFire && (Stamina >= 50))
-		{
-			//This is a dummy logic - we will only have 2 skills for this post
-			TSubclassOf<ASkill> SkillBP_Poison = SkillsComponent->SkillsArray[0];
+		if (Pickup == Item) {
 
-			if (SkillBP_Poison)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Fire_P1"));
-				FActorSpawnParameters ActorSpawnParams;
+			Inventory.RemoveAt(Counter);
+			return true;
 
-				TArray<FTransform> SpawnTransforms_Poision = GetSpawnTransforms(ValueSkill6->GetLevel_Poision());
-				if (IsValidGetLevel_Poision())
-				{
-					UE_LOG(LogTemp, Warning, TEXT("Fire_P3"));
-					if (SpawnTransforms_Poision.Num() != 0)
-					{
-						UE_LOG(LogTemp, Warning, TEXT("Fire_P4"));
-						for (int32 i = 0; i < SpawnTransforms_Poision.Num(); i++)
-						{
-							GetWorld()->SpawnActor<ASkill>(SkillBP_Poison, SpawnTransforms_Poision[i], ActorSpawnParams);
-							Stamina -= 50;
-							bCanFire = false;
-							GetWorldTimerManager().SetTimer(DashTimer, this, &AMainCharacter::ResetFire, FireCoolDown, false);
-							UE_LOG(LogTemp, Warning, TEXT("Fire_P2"));
+		}
+		++Counter;
+	}
+	return false;
+}
 
-						}
+TArray<class AItem*> AMainCharacter::GetInventoryItems()
+{
+	return Inventory;
+}
 
-					}
-				}
+int32 AMainCharacter::GetCurrentInventoryCount()
+{
+	return  Inventory.Num() - 1;
+}
 
-			}
+bool AMainCharacter::CheckIfClientHasItem(AItem* Item)
+{
+	for (AItem* Pickup : Inventory)
+	{
+		if (Pickup == Item) {
+
+			return true;
+
 		}
 	}
-
-}
-
-void AMainCharacter::ResetFire()
-{
-    bCanFire = true;
-	//ValueSkill6->Destroy();
+	return false;
 }
