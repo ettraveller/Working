@@ -93,7 +93,8 @@ void AMainPlayerController::Tick(float DeltaTime)
 		// Enemyhealthbar combattarget 위치에 닿을때마다 나타나게 하기
 		FVector2D PositionInViewport;
 		ProjectWorldLocationToScreen(EnemyLocation, PositionInViewport);
-		PositionInViewport.Y = 30.f;
+		PositionInViewport.Y = 100.f;
+		//PositionInViewport.X = -50.f;
 
 		FVector2D SizeInViewport(300.f, 25.f);
 

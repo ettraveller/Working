@@ -125,13 +125,14 @@ void AEnemy::AgroSphereOnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AA
 				Main->SetCombatTarget(nullptr);
 			}
 			Main->setHasCombatTarget(false);
-
 			Main->UpdateCombatTarget();
 			
 			SetEnemyMovementStatus(EEnemyMovementStatus::EMS_Idle);
 			if (AIController)
 			{
 				AIController->StopMovement();
+				// 움직임 멈췄을시 enemy healthbar 안보이게 하기
+				Main->MainPlayerController->RemoveEnemyHealthBar();
 			}
 		}
 	}
@@ -272,6 +273,7 @@ void AEnemy::CombatOnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AAct
 
 void AEnemy::CombatOnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+
     
 }
 
