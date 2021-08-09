@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/SaveGame.h"
 #include "Item.h"
+#include "GameFramework/SaveGame.h"
 #include "RPGSaveGame.generated.h"
 
 /**

@@ -9,6 +9,7 @@
 #include "Enemy.h"
 #include <AIController.h>
 
+
 // Sets default values
 ASpanwVolume::ASpanwVolume()
 {
@@ -16,6 +17,7 @@ ASpanwVolume::ASpanwVolume()
 	PrimaryActorTick.bCanEverTick = true;
 
 	SpawnBox = CreateDefaultSubobject<UBoxComponent>(TEXT("Spanwing Box"));
+
 
 }
 
@@ -32,7 +34,7 @@ void ASpanwVolume::BeginPlay()
 		SpawnArray.Add(Actor_4);
 	}
 
-
+	
 }
 
 // Called every frame

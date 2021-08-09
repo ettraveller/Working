@@ -7,6 +7,7 @@
 #include <Particles/ParticleSystemComponent.h>
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "TextureResource.h"
 #include "Engine/World.h"
 
 
@@ -20,7 +21,7 @@ AItem::AItem()
 	// item 에 겹쳤을때 행동 함수 설정
 	CollisionVolume = CreateDefaultSubobject<USphereComponent>(TEXT("CollsionVolume"));
 	RootComponent = CollisionVolume;
-	Thumbnail = CreateDefaultSubobject<UTexture2D>("Thumbnail");
+	ThumbnailImage = CreateDefaultSubobject<UTexture2D>("ThumbnailImage");
 
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(GetRootComponent());
@@ -32,7 +33,6 @@ AItem::AItem()
 	RotationRate = 45.f;
 
 	ObjectPickedUp = false;
-
 }
 
 void AItem::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
@@ -53,8 +53,6 @@ void AItem::BeginPlay()
 	CollisionVolume->OnComponentEndOverlap.AddDynamic(this, &AItem::OnOverlapEnd);
 	
 }
-
-
 
 // Called every frame
 void AItem::Tick(float DeltaTime)
@@ -102,5 +100,5 @@ void AItem::Inventory(bool In)
 
 UTexture2D* AItem::GetItmeIcon()
 {
-	return Thumbnail;
+	return ThumbnailImage;
 }

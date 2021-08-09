@@ -21,9 +21,6 @@ void APickUp::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* O
 		AMainCharacter* Main = Cast<AMainCharacter>(OtherActor);
 		if (Main)
 		{
-
-			//UE_LOG(LogTemp, Warning, TEXT("Picked up  ???: %s"), *PickupName);
-
 			FString PickupNamecpp = *PickupName;
 
 			if (PickupNamecpp.Equals("Coin")) {
@@ -32,14 +29,13 @@ void APickUp::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* O
 				Destroy();
 			}
 			else {
+				// Overlap 된 potion actor 설정
 				Main->SetPotion(this, PickupNamecpp);
 				//닿으면 collision 없애기
 				this->SetActorEnableCollision(false);
 				//아니면 potion 사용 여부 
 				Main->CallItemPotion(this);
 			}
-			//Main->CallItemPotion();
-			//Main->PickUpLocations.Add(GetActorLocation());
 
 			if (OverlapParticles)
 			{
@@ -49,7 +45,6 @@ void APickUp::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* O
 			{
 				UGameplayStatics::PlaySound2D(this, OverlapSound);
 			}
-			
 		}
 	}
 
@@ -59,6 +54,7 @@ void APickUp::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* Oth
 {
 	Super::OnOverlapEnd(OverlappedComponent, OtherActor, OtherComp, OtherBodyIndex);
 
+	// overlap 구역 벗어나면 선택창 안보이게 하기.
 	if (OtherActor)
 	{
 		AMainCharacter* Main = Cast<AMainCharacter>(OtherActor);

@@ -36,17 +36,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | ItemProperties")
 	float RotationRate;
 
+	// 인벤토리 속 썸네일 네임 및 썸네일 이미지
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Inventory")
 	FString ThumbnailName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Inventory")
-	UTexture2D* Thumbnail;
+	UTexture2D* ThumbnailImage;
 
 	// 픽업을 할지 말지 설정하게 하기
 	UPROPERTY(ReplicatedUsing = OnRep_PickUp)
 	bool ObjectPickedUp;
 
-
+	// 픽업된 아이템이 WEAPON 인지 PICKUP 인지 구별하기 위해
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PickUpName")
 	FString PickupName;
 
@@ -57,8 +58,6 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	
-
 
 public:	
 	// Called every frame

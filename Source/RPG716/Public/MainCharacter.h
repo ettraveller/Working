@@ -4,8 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Enemy.h"
-#include "PickUp.h"
 #include "MainCharacter.generated.h"
 
 
@@ -13,8 +11,6 @@
 //단, 여기서 주의해야할 점이 있는데, 언리얼 열거형을 만들때 반드시 일반적인 enum이 아닌 enum class로 만들어야 한다는 점이다.
 //만약 enum class로 만들지 않고 일반적인 enum으로 만들어서 UENUM() 매크로를 붙이고 컴파일을 하면 에러가 발생해서 컴파일에 실패한다.
 //그리고 UENUM은 uint8만을 지원하기 때문에 이 부분도 빠뜨리지 않고 넣어주어야 한다.
-
-
 
 
 UENUM(BlueprintType)
@@ -42,9 +38,6 @@ enum class EStaminaStatus : uint8
 
 };
 
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpdateInvnetoryDelegate, const TArray<AItem*>&, InvnetoryItems);
-
-
 //Character의 rootcomp는 capsule밖에 안댐
 UCLASS()
 class RPG716_API AMainCharacter : public ACharacter
@@ -58,6 +51,9 @@ public:
 	// Weapon 데이터 저장시에 필요 -> Weapon 데이터들이 저장되어 있는 BP_ItemStorage 를 save 해야함!
 	UPROPERTY(EditDefaultsOnly, Category = "SaveData")
 	TSubclassOf<class AItemStorage> WeaponStorage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "SaveData")
+	TSubclassOf<class ASkillDataTable> SkillData;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	bool bHasCombatTarget;
@@ -154,12 +150,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player Stats")
 	int32 Coins;
 
-
-
 	// 인벤토리 Tarray
-	//TArray<AItem*> _inventory;
 	TArray<AItem*> Inventory;
-
 
 protected:
 	// Called when the game starts or when spawned
@@ -188,7 +180,7 @@ public:
 	void Dash();
 	void StopDash();
 	void ResetDash();
-	
+
 	UPROPERTY()
 	FTimerHandle DashTimer;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Dash")
@@ -196,10 +188,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Dash")
 	float DashCoolDown;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Dash")
-	float DashStopTime;
-
+	float StopDashTime;
+	
 	bool bCanDash;
-
+	
 
 	// 움직임 상태를 확인하여 sprint 가능하게 하기
 	bool bMovingForward;
@@ -225,6 +217,7 @@ public:
 	// Potion 사용시 stamina 증가
 	UFUNCTION(BlueprintCallable)
 	void IncrementStamina(float Amount);
+
 	void Die();
 
 	virtual void Jump() override;
@@ -260,62 +253,62 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Items")
 	class AItem* ActiveOverlappingItem;
 
-	// Weapon 장비 객체를 따로 받아옴
 	void SetEquipWeapon(AWeapon* WeaponToSet);
-	FORCEINLINE AWeapon* GetEquipWeapon() {return EquipWeapon; }
-	FORCEINLINE void SetActiveOverlappingItem(AItem* Item) {ActiveOverlappingItem = Item; }
-	//void SetActiveOverlappingItem(AActor* OtherActor);
+	FORCEINLINE AWeapon* GetEquipWeapon() { return EquipWeapon; }
+	FORCEINLINE void SetActiveOverlappingItem(AItem* Item) { ActiveOverlappingItem = Item; }
 
 	// 포션 사용 여부 확인시에 필요
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Items")
 	class APickUp* PickUpItem;
 
+	// Potion1 인지 2인지 확인하기 위해서
 	FString GetPotionNameValue;
 
+	// set 해주는 이유 BP 에서 ovverlap 된 객체를 못 불러오기때문에 CPP 에서 overlap 된 객체를 불러옴
 	UFUNCTION(BlueprintCallable)
-	void SetPotion(APickUp* PickUpToSet, FString PositonName) {PickUpItem = PickUpToSet; GetPotionNameValue = PositonName;}
-	FORCEINLINE APickUp* GetPickUp() { return PickUpItem;}
-
+	void SetPotion(APickUp* PickUpToSet, FString PositonName) { PickUpItem = PickUpToSet; GetPotionNameValue = PositonName; }
+	FORCEINLINE APickUp* GetPickUp() { return PickUpItem; }
 	UFUNCTION(BlueprintCallable)
-	FString GetPotionName() {return GetPotionNameValue;}
-
-
-	// 장비 득템시 HUD
-	//UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equip")
+	FString GetPotionName() { return GetPotionNameValue; }
+	
+	// 장비착용 여부 HUD Toggle
 	UFUNCTION(BlueprintCallable)
 	bool CallItemEquip(bool result, AItem* Item);
 
-	/*UFUNCTION(BlueprintCallable)
-	AItem* CallItemEquip(AItem* Item);*/
-	
 	void UnCallItemEquip();
 
+	// set 해주는 이유 BP 에서 ovverlap 된 객체를 못 불러오기때문에 CPP 에서 overlap 된 객체를 불러옴 
 	AWeapon* AttachWeapon;
 	UFUNCTION(BlueprintCallable)
-	void setWeapon(AWeapon* Weapon) {AttachWeapon = Weapon;}
-	FORCEINLINE AWeapon* GetWeapon() {return AttachWeapon;}
+	void setWeapon(AWeapon* Weapon) { AttachWeapon = Weapon; }
+	FORCEINLINE AWeapon* GetWeapon() { return AttachWeapon; }
 
+
+	// Weapon overlap 시에 장착하기 누를시
 	UFUNCTION(BlueprintCallable)
 	void EquipOn();
 
+	// Weapon overlap 시에 저장하기 누를시
 	UFUNCTION(BlueprintCallable)
 	void EquipSave();
 
+	// Inventory 내에서 더블클릭한게 weapon 이여서 장착시
 	UFUNCTION(BlueprintCallable)
 	void EquipOnInThumbnail();
 
-	// 물약 득템시 HUD
-	//UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equip")
+	// 물약 사용 여부 HUD Toggle
 	void CallItemPotion(AItem* Item);
-
 	void UnCallItemPotion();
 
+	// Potion overlap 시에 사용하기 누를시
 	UFUNCTION(BlueprintCallable)
 	void PotionUse(AItem* Item);
 
+	// nventory 내에서 더블클릭한게 potion 이여서 사용시
 	UFUNCTION(BlueprintCallable)
 	void PotionUseInThumbnail();
 
+	// Potion overlap 시에 저장하기 누를시
 	UFUNCTION(BlueprintCallable)
 	void PotionSave();
 
@@ -357,25 +350,62 @@ public:
 	void LoadGame(bool SetPosition);
 
 	void LoadGameNoSwitch();
+	//
+//private:
+//	/*Returns a fixed transform based on the given spring arm comp*/
+	UFUNCTION()
+	FTransform GetFixedSpringArmTransform(USpringArmComponent* SpringArm);
+	//
+	//	/*Returns an array of transform in order to determine how many skills will get spawned*/
+	UFUNCTION()
+	TArray<FTransform> GetSpawnTransforms(int32 level);
+	//
+	//	/*The root component in which the spring arm components will be attached*/
+	//protected:
+	/*Returns the skills component*/
+	
+	UPROPERTY(VisibleAnywhere)
+	class USceneComponent* SkillsRootComp;
+
+	UPROPERTY(VisibleAnywhere)
+	class USpringArmComponent* LevelOneSpringArm;
+
+	UPROPERTY(VisibleAnywhere)
+	class USpringArmComponent* LevelTwoSpringArm;
+
+	UPROPERTY(VisibleAnywhere)
+	class USpringArmComponent* LevelThreeSpringArm;
+
+	//	/*Skills Component reference*/
+	UPROPERTY(VisibleAnywhere)
+	class USkillComponent* SkillsComponent;
+
+	UFUNCTION(BlueprintCallable, Category = TLSkillsTree)
+	USkillComponent* GetSkillsComponent() const { return SkillsComponent; }
+
+	UPROPERTY(BlueprintReadWrite, Category = "skill")
+	class ASkill* ValueSkill6;
+	UFUNCTION(BlueprintCallable, Category = TLSkillsTree)
+    bool IsValidGetLevel_Fire();
 
 	
-	////인벤토리에 아이템 추가시 
-	//void AddToInventory(AItem* Item);
+	UFUNCTION(BlueprintCallable, Category = TLSkillsTree)
+    bool IsValidGetLevel_Poision();
 
-	//UFUNCTION(BlueprintCallable)
-	//void UpdateInventory();
+	UFUNCTION(BlueprintCallable, Category = TLSkillsTree)
+	void Fire_FireBall();
 
-	//UPROPERTY(BlueprintAssignable, Category = "Item | PickUp")
-	//FUpdateInvnetoryDelegate FUpdateInvnetoryDelegate;
+	UFUNCTION(BlueprintCallable, Category = TLSkillsTree)
+	void Fire_PoisionBall();
+
+	void ResetFire();
+
+	bool bCanFire;
+
+	float FireCoolDown;
 
 	// 아이템 추가하기.
 	bool AddItem(class AItem* Item);
-
-	//모든 아이템 빼기
-	void DropAllInventory();
-
-	UFUNCTION(BlueprintCallable)
-	void DropItem(class AItem* Item);
 
 	// 인벤토리 드롭후에 인벤토리에서 제거하기 위해
 	bool RemoveItemFromInventory(class AItem* Item);
@@ -390,6 +420,4 @@ public:
 
 	// 아이템을 가지고 있는지 여부 확인
 	bool CheckIfClientHasItem(class AItem* Item);
-
-
 };

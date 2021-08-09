@@ -89,10 +89,10 @@ public:
 	void GameModeOnly();
 
 	// 인벤토리 창 이벤트
-	UFUNCTION(BlueprintNativeEvent, Category = "HUD")
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "HUD")
 	void DisplayInventoryMenu();
 
-	UFUNCTION(BlueprintNativeEvent, Category = "HUD")
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "HUD")
 	void RemoveInvnetoryMenu();
 
 	void ToggleInventoryMenu();
@@ -106,14 +106,11 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "HUD")
 	void RemoveItemEquipMenu();
 
-	//void ToggleItemEquipMenu();
-
 	void ViewItemEquipMenu();
 
 	void UnableItemEquipMenu();
 
 	bool bItemEquipMenu;
-
 
 	// 포션 득템시 사용 여부 HUD
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "HUD")
@@ -121,8 +118,6 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "HUD")
 	void RemoveIItemPotionMenu();
-
-	//void ToggleItemPotionMenu();
 
 	void ViewItemPotionMenu();
 

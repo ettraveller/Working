@@ -48,13 +48,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Combat")
 	float Damage;
 
-	// 장비득템시 착용 여부 확인 HUD 시 필요
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Controller")
-	class AMainPlayerController* MainPlayerController;
-
 	bool bItemEquipDown;
-
-
 
 protected:
      
@@ -63,10 +57,9 @@ protected:
 
 public:
 
-	
-	void OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) ;
+	virtual void OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
 
-	void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) ;
+	virtual void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) override;
 	
 	void Equip(class AMainCharacter* Char);
 
@@ -92,6 +85,6 @@ public:
 
 	FORCEINLINE void SetInstigator(AController* Inst) { WeaponInstigator = Inst; }
 
-	
 
+	
 };

@@ -14,7 +14,6 @@ class RPG716_API APickUp : public AItem
 {
 	GENERATED_BODY()
 
-
 public:
     APickUp();
 
